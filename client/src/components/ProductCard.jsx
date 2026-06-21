@@ -1,48 +1,48 @@
-import { Heart } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { ShoppingBag, Star } from 'lucide-react';
+import { useCart } from '../context/CartContext';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 export default function ProductCard({ product }) {
-  const navigate = useNavigate();
-  const [isLiked, setIsLiked] = useState(false);
-
-  const { id, name, price, images, condition = 'New', category } = product;
-
+  const { addToCart } = useCart();
+  
   return (
-    <div className="group relative">
-      <div
-        onClick={() => navigate(`/product/${id}`)}
-        className="aspect-square w-full cursor-pointer overflow-hidden bg-zinc-100 dark:bg-zinc-900"
-      >
-        <img
-          src={images[0]}
-          alt={name}
-          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-        />
-        {condition!== 'New' && (
-          <div className="absolute left-3 top-3 rounded-full bg-black/80 px-3 py-1 text-xs font-bold text-white backdrop-blur-md">
-            {condition}
+    <motion.div
+      whileHover={{ y: -8, rotateX: 3 }}
+      transition={{ type: 'spring', stiffness: 400 }}
+    >
+      <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group">
+        <Link to={`/shop/${product.id}`}>
+          <div className="aspect-square bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+            <img 
+              src={product.image} 
+              alt={product.name} 
+              className="w-full h-full object-cover group-hover:scale-110 transition duration-500" 
+            />
           </div>
-        )}
+        </Link>
+        <div className="p-3 sm:p-4">
+          <div className="flex items-center gap-1 mb-1">
+            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+            <span className="text-xs text-neutral-600 dark:text-neutral-400">{product.rating}</span>
+          </div>
+          <Link to={`/shop/${product.id}`}>
+            <h3 className="font-semibold mb-1 text-sm sm:text-base text-neutral-900 dark:text-white line-clamp-1">
+              {product.name}
+            </h3>
+          </Link>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">{product.category}</p>
+          <div className="flex items-center justify-between">
+            <span className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white">₵{product.price}</span>
+            <button 
+              onClick={(e) => { e.preventDefault(); addToCart(product); }}
+              className="bg-neutral-900 dark:bg-rose-500 text-white p-2 rounded-lg hover:bg-rose-500 dark:hover:bg-rose-600 transition"
+            >
+              <ShoppingBag className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
       </div>
-
-      <button
-        onClick={() => setIsLiked(!isLiked)}
-        className="absolute right-3 top-3 rounded-full bg-white/90 p-2 opacity-0 backdrop-blur-md transition group-hover:opacity-100 dark:bg-black/90"
-      >
-        <Heart className={`h-4 w-4 ${isLiked? 'fill-rose-500 text-rose-500' : 'text-zinc-700'}`} />
-      </button>
-
-      <div className="mt-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">{category}</p>
-        <h3
-          onClick={() => navigate(`/product/${id}`)}
-          className="mt-1 cursor-pointer text-sm font-semibold hover:text-rose-500"
-        >
-          {name}
-        </h3>
-        <p className="mt-1 text-lg font-bold">₵{price}</p>
-      </div>
-    </div>
+    </motion.div>
   );
 }

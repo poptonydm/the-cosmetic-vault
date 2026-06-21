@@ -1,69 +1,80 @@
+import { Phone, Mail, MapPin } from 'lucide-react';
 import { FaTwitter, FaInstagram, FaFacebookF, FaLinkedinIn } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 
 export default function Footer() {
-  const defaultSocials = [
-    { Icon: FaTwitter, href: 'https://x.com/therealtokenpop?s=11', name: 'Twitter' },
-    { Icon: FaInstagram, href: 'https://www.instagram.com/tokenpop.app?igsh=MTRhaTF3dWQzY2Jkdw%3D%3D&utm_source=qr', name: 'Instagram' },
-    { Icon: FaFacebookF, href: 'https://web.facebook.com/profile.php?id=61586285156793', name: 'Facebook' },
-    { Icon: FaLinkedinIn, href: 'https://linkedin.com', name: 'LinkedIn' },
-  ];
-
-  const links = defaultSocials;
-
   return (
-    <footer className="border-t border-zinc-200 bg-zinc-50 text-zinc-900 dark:border-zinc-800 dark:bg-black dark:text-white">
-      <div className="mx-auto max-w-7xl px-4 py-12">
-        <div>
-          <h3 className="mb-4 text-2xl font-black">Pris<span className="text-rose-500">Aura</span></h3>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Buy anything, anywhere.</p>
-        </div>
-        <div className="grid grid-cols-3 gap-8 mt-3">
-          
+    <footer className="bg-neutral-900 dark:bg-black text-neutral-300 mt-20">
+      <div className="max-w-7xl mx-auto px-4 py-16">
+        <div className="grid md:grid-cols-4 gap-12 mb-12">
           <div>
-            <h4 className="mb-4 font-bold">Shop</h4>
-            <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
-              <li><Link to="/shop?category=Electronics" className="transition hover:text-black dark:hover:text-white">Electronics</Link></li>
-              <li><Link to="/shop?category=Fashion" className="transition hover:text-black dark:hover:text-white">Fashion</Link></li>
-              <li><Link to="/shop?category=Home" className="transition hover:text-black dark:hover:text-white">Home</Link></li>
-              <li><Link to="/shop" className="transition hover:text-black dark:hover:text-white">All Categories</Link></li>
-            </ul>
-          </div>
-          
-          <div>
-            <h4 className="mb-4 font-bold">Support</h4>
-            <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
-              <li><Link to="/contact" className="transition hover:text-black dark:hover:text-white">Contact Us</Link></li>
-              <li><Link to="/help" className="transition hover:text-black dark:hover:text-white">Help Center</Link></li>
-              <li><Link to="/buyer-protection" className="transition hover:text-black dark:hover:text-white">Buyer Protection</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="mb-4 font-bold">Company</h4>
-            <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
-              <li><Link to="/about" className="transition hover:text-black dark:hover:text-white">About Us</Link></li>
-              <li><Link to="/terms" className="transition hover:text-black dark:hover:text-white">Terms of Service</Link></li>
-              <li><Link to="/privacy" className="transition hover:text-black dark:hover:text-white">Privacy Policy</Link></li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-zinc-200 pt-8 dark:border-zinc-800 md:flex-row">
-          <p className="text-sm text-zinc-500 dark:text-zinc-500">© 2026 PrisAuraStore. All rights reserved.</p>
-          <div className="flex gap-4">
-            {links.map(({ Icon, href, name }, i) => (
-              <a
-                key={i}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={name}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-600 transition-all hover:border-rose-500 hover:text-rose-500 dark:border-white/10 dark:bg-white/5 dark:text-zinc-400 dark:hover:border-rose-500 dark:hover:text-rose-500"
-              >
-                <Icon size={18} />
+            <h3 className="text-white text-2xl font-bold mb-4">The Cosmetics Vault</h3>
+            <p className="text-sm text-neutral-400 mb-6">
+              Your premier beauty destination in Accra for hair, nails, skin, and professional products.
+            </p>
+            <div className="flex gap-4">
+              <a href="#" className="hover:text-rose-500 transition">
+                <FaInstagram className="h-5 w-5" />
               </a>
-            ))}
+              <a href="#" className="hover:text-rose-500 transition">
+                <FaFacebookF className="h-5 w-5" />
+              </a>
+              <a href="#" className="hover:text-rose-500 transition">
+                <FaTwitter className="h-5 w-5" />
+              </a>
+            </div>
+          </div>
+
+          <div className="md:col-span-3">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-8">
+              <div>
+                <h4 className="text-white font-semibold mb-4">Quick Links</h4>
+                <ul className="space-y-3 text-sm">
+                  <li><Link to="/services" className="hover:text-rose-500 transition">Services</Link></li>
+                  <li><Link to="/shop" className="hover:text-rose-500 transition">Shop Products</Link></li>
+                  <li><Link to="/booking" className="hover:text-rose-500 transition">Book Appointment</Link></li>
+                  <li><Link to="/about" className="hover:text-rose-500 transition">About Us</Link></li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="text-white font-semibold mb-4">Services</h4>
+                <ul className="space-y-3 text-sm">
+                  <li>Hair Styling & Braids</li>
+                  <li>Pedicure & Manicure</li>
+                  <li>Facials & Skin Care</li>
+                  <li>Glam Makeup</li>
+                </ul>
+              </div>
+
+              <div className="col-span-2 lg:col-span-1">
+                <h4 className="text-white font-semibold mb-4">Contact</h4>
+                <ul className="space-y-3 text-sm">
+                  <li className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-rose-500 flex-shrink-0 mt-0.5" />
+                    <span>Osu, Accra, Ghana</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-rose-500" />
+                    <span>+233 20 123 4567</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-rose-500" />
+                    <span>hello@cosmeticsvault.com</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-neutral-800 pt-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-neutral-500">
+            <p>© 2026 The Cosmetics Vault. All rights reserved.</p>
+            <div className="flex gap-6">
+              <a href="#" className="hover:text-neutral-300 transition">Privacy Policy</a>
+              <a href="#" className="hover:text-neutral-300 transition">Terms of Service</a>
+            </div>
           </div>
         </div>
       </div>
