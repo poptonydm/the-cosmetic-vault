@@ -1,19 +1,60 @@
 import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import axios from 'axios';
 
 export default function Contact() {
-  const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
-  const [sent, setSent] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    subject: '',
+    message: ''
+  });
+  const [status, setStatus] = useState('idle');
+  const [errors, setErrors] = useState({});
 
-  const handleSubmit = (e) => {
+  const backendUrl = import.meta.env.VITE_ENV === "development"? import.meta.env.VITE_BACKEND_URL : "/api";
+
+  const validate = () => {
+    const newErrors = {};
+    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    if (!formData.email.trim()) newErrors.email = 'Email is required';
+    else if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = 'Email is invalid';
+    if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
+    if (!formData.subject.trim()) newErrors.subject = 'Subject is required';
+    if (!formData.message.trim()) newErrors.message = 'Message is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Contact form:', form);
-    setSent(true);
-    setTimeout(() => {
-      setSent(false);
-      setForm({ name: '', email: '', subject: '', message: '' });
-    }, 3000);
+    if (!validate()) return;
+
+    setStatus('loading');
+    
+    try {
+      const res = await axios.post(`${backendUrl}/order/consult`, {formData});
+      
+      if (res.data.success) {
+        setStatus('success');
+        setFormData({ name: '', email: '', phone: '', orderNumber: '', subject: '', message: '' });
+        setTimeout(() => setStatus('idle'), 5000);
+      } else {
+        setStatus('error');
+        console.log(res.data)
+      }
+    } catch(err) {
+      setStatus('error');
+      console.error(err)
+    }
+
+  };
+
+  const handleChange = (e) => {
+    setFormData({...formData, [e.target.name]: e.target.value });
+    if (errors[e.target.name]) setErrors({...errors, [e.target.name]: '' });
   };
 
   return (
@@ -44,8 +85,8 @@ export default function Contact() {
                 <div>
                   <h3 className="font-semibold mb-1">Location</h3>
                   <p className="text-neutral-600 dark:text-neutral-400">
-                    The Cosmetics Vault<br />
-                    Oxford Street, Osu<br />
+                    Luxe & Glow Studio<br />
+                    Market Road, Madina<br />
                     Accra, Ghana
                   </p>
                 </div>
@@ -95,7 +136,7 @@ export default function Contact() {
                 allowFullScreen="" 
                 loading="lazy" 
                 referrerPolicy="no-referrer-when-downgrade"
-                title="The Cosmetics Vault Location"
+                title="Luxe & Glow Studio Location"
               ></iframe>
             </div>
           </motion.div>
@@ -113,56 +154,71 @@ export default function Contact() {
             </p>
 
             <div>
-              <label className="block font-semibold mb-2 text-sm">Name</label>
+              <label className="block font-semibold mb-2 text-sm">Name <span className="text-rose-500">*</span> </label>
               <input 
                 type="text" 
-                value={form.name}
-                onChange={e => setForm({...form, name: e.target.value})}
+                value={formData.name}
+                name="name"
+                onChange={handleChange}
                 className="w-full px-4 py-3 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 text-neutral-900 dark:text-white"
                 required 
               />
+              {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
             </div>
 
             <div>
-              <label className="block font-semibold mb-2 text-sm">Email</label>
+              <label className="block font-semibold mb-2 text-sm">Email <span className="text-rose-500">*</span> </label>
               <input 
                 type="email" 
-                value={form.email}
-                onChange={e => setForm({...form, email: e.target.value})}
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
                 className="w-full px-4 py-3 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 text-neutral-900 dark:text-white"
                 required 
               />
+              {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
             </div>
 
             <div>
-              <label className="block font-semibold mb-2 text-sm">Subject</label>
+              <label className="block font-semibold mb-2 text-sm">Subject <span className="text-rose-500">*</span> </label>
               <input 
-                type="text" 
-                value={form.subject}
-                onChange={e => setForm({...form, subject: e.target.value})}
+                type="text" name="subject"
+                value={formData.subject}
+                onChange={handleChange}
                 placeholder="Booking question, product inquiry..."
                 className="w-full px-4 py-3 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 text-neutral-900 dark:text-white"
                 required 
               />
+              {errors.subject && <p className="mt-1 text-xs text-red-500">{errors.subject}</p>}
             </div>
 
             <div>
-              <label className="block font-semibold mb-2 text-sm">Message</label>
+              <label className="mb-2 block text-sm font-semibold">Phone Number <span className="text-rose-500">*</span> </label>
+              <input type="tel" name="phone" value={formData.phone} onChange={handleChange}
+                className={`w-full rounded-lg border bg-white px-4 py-3 outline-none transition focus:ring-2 focus:ring-black dark:bg-zinc-900 dark:focus:ring-white ${errors.phone? 'border-red-500' : 'border-zinc-300 dark:border-zinc-700'}`}
+                placeholder="+233 50 123 4567" />
+              {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
+            </div>
+
+            <div>
+              <label className="block font-semibold mb-2 text-sm">Message <span className="text-rose-500">*</span> </label>
               <textarea 
-                rows="5" 
-                value={form.message}
-                onChange={e => setForm({...form, message: e.target.value})}
+                rows="5"
+                name="message"
+                value={formData.message}
+                onChange={handleChange}
                 className="w-full px-4 py-3 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 text-neutral-900 dark:text-white resize-none"
                 required
               ></textarea>
+              {errors.message && <p className="mt-1 text-xs text-red-500">{errors.message}</p>}
             </div>
 
             <button 
               type="submit" 
               className="w-full bg-rose-500 text-white py-3 rounded-lg font-semibold hover:bg-rose-600 transition disabled:opacity-50"
-              disabled={sent}
+              disabled={status ==='success'}
             >
-              {sent? 'Message Sent!' : 'Send Message'}
+              {status ==='success' ? 'Message Sent!' : 'Send Message'}
             </button>
           </motion.form>
         </div>

@@ -10,12 +10,12 @@ const ordersShema = new mongoose.Schema({
     quantity:{type: Number, required: true},
     total:{type: Number, required: true},
     paymentRef:{type: String, required: true},
-    status: {type: String, default: "order made"},
+    status: {type: String, default: "paid"},
     color:{type: String},
     image:{type: String, required: true},
     size:{type: String}
 },{timestamps: true},)
 
-const orderAModel = mongoose.models.prisorders || mongoose.model('prisorders', ordersShema);
+const orderAModel = mongoose.models.luxegloworders || mongoose.model('luxegloworders', ordersShema);
 
 export default orderAModel;

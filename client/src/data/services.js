@@ -1,7 +1,7 @@
 export const services = [
     { 
       id: 1, 
-      name: 'Signature Silk Press', 
+      name: 'Hair Styling', 
       desc: 'Sleek, smooth finish for natural hair with deep conditioning', 
       price: 250, 
       duration: '2 hrs', 
@@ -17,7 +17,7 @@ export const services = [
     },
     { 
       id: 2, 
-      name: 'Box Braids', 
+      name: 'Braids', 
       desc: 'Classic protective style, multiple lengths available', 
       price: 350, 
       duration: '5 hrs', 
@@ -62,7 +62,7 @@ export const services = [
     },
     { 
       id: 5, 
-      name: 'Glam Makeup', 
+      name: 'CLasic Lashes', 
       desc: 'Full face for events, weddings & photoshoots', 
       price: 300, 
       duration: '1 hr', 

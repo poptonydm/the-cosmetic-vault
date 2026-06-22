@@ -7,7 +7,11 @@ const OrderContext = createContext();
 
 export function OrderProvider({ children }) {
   const [orders, setOrders] = useState(() => {
-    const saved = localStorage.getItem('emmastudio-orders');
+    const saved = localStorage.getItem('luxe&glow');
+    return saved? JSON.parse(saved) : [];
+  });
+  const [appointments, setAppointments] = useState(() => {
+    const saved = localStorage.getItem('luxe&glowA');
     return saved? JSON.parse(saved) : [];
   });
   const [isPolling, setIsPolling] = useState(false);
@@ -21,13 +25,29 @@ export function OrderProvider({ children }) {
       isInitialLoad.current = false;
       return;
     }
-    localStorage.setItem('emmastudio-orders', JSON.stringify(orders));
+    localStorage.setItem('luxe&glow', JSON.stringify(orders));
   }, [orders]);
+
+  useEffect(() => {
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      return;
+    }
+    localStorage.setItem('luxe&glowA', JSON.stringify(appointments));
+  }, [appointments]);
 
   const addOrderData = (orderData) => {
     setOrders(prev => {
       if (prev.some(o => o._id === orderData._id)) return prev;
       return [...prev, orderData];
+    });
+  };
+
+  const addAppointmentsData = (appointmentsData) => {
+    setAppointments(prev => {
+      console.log(prev)
+      if (prev.some(o => o._id === appointmentsData._id)) return prev;
+      return [...prev, appointmentsData];
     });
   };
 
@@ -90,6 +110,59 @@ export function OrderProvider({ children }) {
     }
   }, [orders, backendUrl, isPolling]);
 
+  // Poll server for status updates every 60s
+  const checkAppointmentsStatusUpdates = useCallback(async () => {
+    if (isPolling ||!appointments.length) return;
+
+    // Only check non-terminal orders
+    const ordersToCheck = appointments.filter(a =>
+    !['finished', 'cancelled'].includes(a.status) &&
+    !a._id.startsWith('local_') // Skip unsynced local orders
+    );
+
+    if (!ordersToCheck.length) return;
+
+    setIsPolling(true);
+    try {
+      const results = await Promise.allSettled(
+        ordersToCheck.map(async (appointment) => {
+          const res = await axios.get(`${backendUrl}/order/i-data?orderId=${appointment._id}`);
+          return res.data.success? res.data.data : null;
+        })
+      );
+
+      let updatedCount = 0;
+      setOrders(prev => {
+        const updated = [...prev];
+        results.forEach((result, i) => {
+          if (result.status === 'fulfilled' && result.value) {
+            const serverOrder = result.value;
+            const localOrder = ordersToCheck[i];
+
+            // Only update if status changed
+            if (serverOrder.status!== localOrder.status) {
+              const idx = updated.findIndex(o => o._id === localOrder._id);
+              if (idx!== -1) {
+                updated[idx] = {...updated[idx],...serverOrder };
+                updatedCount++;
+                toast.info(`Appointment #${localOrder._id.slice(-6).toUpperCase()} updated to ${serverOrder.status}`);
+              }
+            }
+          }
+        });
+        return updated;
+      });
+
+      if (updatedCount > 0) {
+        console.log(`[Appointment] Updated ${updatedCount} appointment statuses`);
+      }
+    } catch (error) {
+      console.error('[Appointment] Poll failed:', error);
+    } finally {
+      setIsPolling(false);
+    }
+  }, [appointments, backendUrl, isPolling]);
+
   // Start polling on mount, cleanup on unmount
   useEffect(() => {
     // Initial check after 5s, then every 60s
@@ -102,6 +175,17 @@ export function OrderProvider({ children }) {
     };
   }, [checkOrderStatusUpdates]);
 
+  useEffect(() => {
+    // Initial check after 5s, then every 60s
+    const initialTimeout = setTimeout(checkAppointmentsStatusUpdates, 5000);
+    pollIntervalRef.current = setInterval(checkAppointmentsStatusUpdates, 60000);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, [checkAppointmentsStatusUpdates]);
+
   // Retry syncing pending orders
   const syncPendingOrders = async () => {
     const pending = orders.filter(o => o.status === 'pending_sync');
@@ -110,6 +194,7 @@ export function OrderProvider({ children }) {
     const results = await Promise.allSettled(
       pending.map(async (localOrder) => {
         const { _id, status, syncError,...payload } = localOrder;
+        console.log(payload)
         const res = await axios.post(`${backendUrl}/order/create-order`, { orderData: payload });
         if (res.data.success) {
           return { oldId: _id, newOrder: res.data.data };
@@ -141,7 +226,48 @@ export function OrderProvider({ children }) {
     }
   };
 
+  // Retry syncing pending Appointments
+  const syncPendingAppointments = async () => {
+    const pending = appointments.filter(a => a.status === 'pending_sync');
+    if (!pending.length) return;
+
+    const results = await Promise.allSettled(
+      pending.map(async (localOrder) => {
+        const { _id, status, syncError,...payload } = localOrder;
+        console.log(payload)
+        const res = await axios.post(`${backendUrl}/order/create-orderA`, { orderData: payload });
+        if (res.data.success) {
+          return { oldId: _id, newOrder: res.data.data };
+        }
+        throw new Error(res.data.message);
+      })
+    );
+
+    let syncedCount = 0;
+    setOrders(prev => {
+      let updated = [...prev];
+      results.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          const { oldId, newOrder } = result.value;
+          updated = updated.map(o => o._id === oldId? newOrder : o);
+          syncedCount++;
+        }
+      });
+      return updated;
+    });
+
+    if (syncedCount) {
+      toast.success(`Synced ${syncedCount} pending order${syncedCount > 1? 's' : ''}`);
+    }
+
+    const failedCount = pending.length - syncedCount;
+    if (failedCount) {
+      toast.error(`${failedCount} order${failedCount > 1? 's' : ''} still pending`);
+    }
+  };
+
   const ordersCount = orders.length;
+  const appointmentsCount = appointments.length;
 
   return (
     <OrderContext.Provider value={{
@@ -150,7 +276,12 @@ export function OrderProvider({ children }) {
       ordersCount,
       updateOrderStatus,
       syncPendingOrders,
-      checkOrderStatusUpdates // Expose for manual refresh
+      checkOrderStatusUpdates,
+      appointments,
+      appointmentsCount,
+      addAppointmentsData,
+      checkAppointmentsStatusUpdates,
+      syncPendingAppointments
     }}>
       {children}
     </OrderContext.Provider>

@@ -9,9 +9,9 @@ const ordersShema = new mongoose.Schema({
     email: {type: String, required: true},
     serviceName:{type: String, required: true},
     servicePrice:{type: Number, required: true},
-    status: {type: String, default: "order made"},
+    status: {type: String, default: "paid"},
 },{timestamps: true},)
 
-const orderModel = mongoose.models.prisorderss || mongoose.model('prisorderss', ordersShema);
+const orderModel = mongoose.models.luxeglowservices || mongoose.model('luxeglowservices', ordersShema);
 
 export default orderModel;

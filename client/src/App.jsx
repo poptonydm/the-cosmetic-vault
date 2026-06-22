@@ -12,14 +12,21 @@ import Contact from './pages/Contact';
 import { ThemeProvider } from './context/ThemeContext';
 import ServiceDetail from './pages/ServiceDetail';
 import ProductDetail from './pages/ProductDetail';
+import OrderDetails from './pages/OrderDetails';
+import { Orders } from './pages/Orders';
+import { OrderProvider } from './context/OrderContext';
+import { Admin } from './pages/Admin';
+import AppointmentDetails from './pages/AppointmentDetails';
+import { Appointments } from './pages/Appointments';
 
 export default function App() {
   return (
     <ThemeProvider >
       <CartProvider>
+      <OrderProvider>
         <div className="min-h-screen flex flex-col">
           <Navbar />
-          <main className="flex-1">
+          <main className="flex-1 bg-white dark:bg-neutral-950">
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/services" element={<Services />} />
@@ -30,10 +37,16 @@ export default function App() {
               <Route path="/contact" element={<Contact />} />
               <Route path="/services/:id" element={<ServiceDetail />} />
               <Route path="/shop/:id" element={<ProductDetail />} />
+              <Route path='/orders' element={<Orders />} />
+              <Route path='/order/:id' element={<OrderDetails />} />
+              <Route path='/appointments' element={<Appointments />} />
+              <Route path='/appointments/:id' element={<AppointmentDetails />} />
+              <Route path='/admin' element={<Admin />} />
             </Routes>
           </main>
           <Footer />
         </div>
+        </OrderProvider>
       </CartProvider>
     </ThemeProvider>
   );

@@ -13,7 +13,9 @@ export default function Navbar() {
     { name: 'Services', path: '/services' },
     { name: 'Shop', path: '/shop' },
     { name: 'About', path: '/about' },
-    { name: 'Contact', path: '/contact' }
+    { name: 'Contact', path: '/contact' },
+    { name: 'Orders', path: '/orders' },
+    { name: 'Appointments', path: '/appointments' }
   ];
 
   return (
@@ -22,7 +24,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center gap-2">
             <Scissors className="h-6 w-6 text-rose-500" />
-            <span className="text-xl font-bold text-neutral-900 dark:text-white">The Cosmetics Vault</span>
+            <span className="text-xl font-bold text-neutral-900 dark:text-white">Luxe & Glow</span>
             </Link>
 
 
@@ -44,7 +46,7 @@ export default function Navbar() {
                 </span>
               )}
             </Link>
-            <Link to="/booking" className="hidden md:block bg-rose-500 text-white px-5 py-2 rounded-full hover:bg-rose-600 transition">
+            <Link to="/services" className="hidden md:block bg-rose-500 text-white px-5 py-2 rounded-full hover:bg-rose-600 transition">
               Book Now
             </Link>
             <button onClick={() => setOpen(!open)} className="md:hidden">
@@ -61,7 +63,7 @@ export default function Navbar() {
               {link.name}
             </Link>
           ))}
-          <Link to="/booking" className="block m-4 bg-rose-500 text-white text-center py-2 rounded-full" onClick={() => setOpen(false)}>
+          <Link to="/services" className="block m-4 bg-rose-500 text-white text-center py-2 rounded-full" onClick={() => setOpen(false)}>
             Book Now
           </Link>
         </div>

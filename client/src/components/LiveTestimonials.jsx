@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Star, ChevronLeft, ChevronRight, Send } from 'lucide-react';
 
 const defaultReviews = [
-  { id: 1, name: 'Ama K.', text: 'Best silk press in Accra! The Cosmetics Vault team is amazing and booking was so easy.', rating: 5, date: '2 days ago' },
+  { id: 1, name: 'Ama K.', text: 'Best silk press in Accra! The Luxe & Glow team is amazing and booking was so easy.', rating: 5, date: '2 days ago' },
   { id: 2, name: 'Efua M.', text: 'My pedicure lasted 3 weeks. Products are top tier. Will definitely be back!', rating: 5, date: '1 week ago' },
   { id: 3, name: 'Kojo B.', text: 'Finally a salon that respects my time. In and out, looking fresh.', rating: 5, date: '3 days ago' }
 ];
@@ -70,7 +70,7 @@ export default function LiveTestimonials() {
             </select>
           </div>
           <textarea
-            placeholder="Share your experience at The Cosmetics Vault..."
+            placeholder="Share your experience at The Luxe & Glow..."
             value={form.text}
             onChange={e => setForm({...form, text: e.target.value})}
             rows="3"

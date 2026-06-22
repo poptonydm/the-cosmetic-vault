@@ -28,14 +28,14 @@ export default function Home() {
           className="relative max-w-7xl mx-auto px-4 py-24 lg:py-32"
         >
           <h1 className="text-4xl lg:text-6xl font-bold mb-6 max-w-2xl">
-            Unlock Your Glow at The Cosmetics Vault
+            Unlock Your Glow at Luxe & Glow Studio
           </h1>
           <p className="text-lg text-neutral-200 mb-8 max-w-xl">
             Premium hair, nails, and beauty services in Accra. Shop professional products. All in one place.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link 
-              to="/booking" 
+              to="/services" 
               className="bg-rose-500 px-8 py-3 rounded-full font-semibold hover:bg-rose-600 transition flex items-center justify-center gap-2"
             >
               Book Appointment <ArrowRight className="h-5 w-5" />

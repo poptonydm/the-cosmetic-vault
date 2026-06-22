@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Calendar, Clock } from 'lucide-react';
+import axios from 'axios';
+import { toast } from 'sonner';
+import { useOrderContext } from '../context/OrderContext';
 
 const timeSlots = ['9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'];
 const stylists = ['Ama', 'Kwame', 'Akosua', 'Kojo'];
@@ -13,10 +16,104 @@ export default function Booking() {
   const [stylist, setStylist] = useState('');
   const [form, setForm] = useState({ name: '', phone: '', email: '' });
 
+  const key = import.meta.env.VITE_PAYSTACK_LIVE_PUBLIC_KEY;
+  const backendUrl = import.meta.env.VITE_ENV === "development"? import.meta.env.VITE_BACKEND_URL : "/api";
+  const { addAppointmentsData } = useOrderContext();
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log({ service: selectedService, date, time, stylist,...form });
-    alert('Booking confirmed! We’ll send you a text.');
+    payWithPaystack();
+  };
+
+  const payWithPaystack = () => {
+    if (!form.name ||!form.email ||!form.phone) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
+    if (typeof window.PaystackPop === 'undefined') {
+      toast.error('Payment service not loaded. Please refresh.');
+      return;
+    }
+
+    const handlePaymentSuccess = async (response) => {
+      try {
+        const placeOrder = await createOrder(response.reference);
+        if(placeOrder){
+          toast.success(`Payment complete! Ref: ${response.reference}`);
+          setOrderRef(response.reference);
+          setCheckoutStep('success');
+        }else{
+          toast.error('Payment succeeded but booking save failed');
+        }
+      } catch (err) {
+        toast.error('Payment succeeded but booking save failed');
+        console.error(err);
+      }
+    };
+
+    const handlePaymentClose = () => {
+      toast.info('Payment window closed');
+    };
+
+    const handler = window.PaystackPop.setup({
+      key: key,
+      email: form.email,
+      amount: Math.round(selectedService.price * 100),
+      currency: 'GHS',
+      ref: `Luxe_${Date.now()}`,
+      metadata: {
+        custom_fields: [
+          { display_name: "Customer Name", variable_name: "customer_name", value: form.name },
+          { display_name: "Service", variable_name: "service", value: selectedService.name},
+          { display_name: "Total", variable_name: "total", value: selectedService.price.toString() }
+        ]
+      },
+      callback: (response) => handlePaymentSuccess(response),
+      onClose: handlePaymentClose,
+    });
+
+    handler.openIframe();
+  };
+
+  const createOrder = async (reference) => {
+    const orderData = {
+      customer: form,
+      service: selectedService,
+      total: selectedService.price,
+      paymentRef: reference,
+      status: 'paid',
+      createdAt: new Date().toISOString(),
+    };
+  
+    try {
+      const res = await axios.post(`${backendUrl}/order/create-orderA`, { orderData });
+  
+      if (res.data.success) {
+        toast.success("Service booked successfully!");
+        addAppointmentsData(res.data.data);
+        return true;
+      } else {
+        throw new Error(res.data.message || 'Server rejected order');
+      }
+    } catch (error) {
+      console.error('API failed, saving order locally:', error);
+  
+      // Mark as pending sync and save locally
+      const localOrder = {
+      ...orderData,
+        status: 'pending_sync',
+        syncError: error.message
+      };
+  
+      addAppointmentsData(localOrder); // Adds to context + localStorage via your useEffect
+  
+      toast.warning("Appointment saved locally", {
+        description: `We'll sync when online. Ref: ${reference}`
+      });
+  
+      return false;
+    }
   };
 
   return (
