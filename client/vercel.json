@@ -2,7 +2,7 @@
   "rewrites": [
     { 
       "source": "/api/:path*", 
-      "destination": "https://priss-aura-backend.vercel.app/api/:path*" 
+      "destination": "https://the-cosmetic-vault-backend.vercel.app/api/:path*" 
     },
     {
       "source": "/(.*)",
