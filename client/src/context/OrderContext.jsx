@@ -1,13 +1,12 @@
 import axios from 'axios';
-import React from 'react'
-import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 
 const OrderContext = createContext();
 
 export function OrderProvider({ children }) {
   const [orders, setOrders] = useState(() => {
-    const saved = localStorage.getItem('luxe&glow');
+    const saved = localStorage.getItem('luxe&glowO');
     return saved? JSON.parse(saved) : [];
   });
   const [appointments, setAppointments] = useState(() => {
@@ -15,22 +14,27 @@ export function OrderProvider({ children }) {
     return saved? JSON.parse(saved) : [];
   });
   const [isPolling, setIsPolling] = useState(false);
-  const isInitialLoad = useRef(true);
-  const pollIntervalRef = useRef(null);
+  const [isAPolling, setIsAPolling] = useState(false);
+
+  const isOrdersInitialLoad = useRef(true);
+  const isAppointmentsInitialLoad = useRef(true);
+  const ordersPollRef = useRef(null);
+  const appointmentsPollRef = useRef(null);
+
   const backendUrl = import.meta.env.VITE_ENV === "development"? import.meta.env.VITE_BACKEND_URL : "/api";
 
-  // Save to localStorage whenever orders change
+  // Save to localStorage
   useEffect(() => {
-    if (isInitialLoad.current) {
-      isInitialLoad.current = false;
+    if (isOrdersInitialLoad.current) {
+      isOrdersInitialLoad.current = false;
       return;
     }
-    localStorage.setItem('luxe&glow', JSON.stringify(orders));
+    localStorage.setItem('luxe&glowO', JSON.stringify(orders));
   }, [orders]);
 
   useEffect(() => {
-    if (isInitialLoad.current) {
-      isInitialLoad.current = false;
+    if (isAppointmentsInitialLoad.current) {
+      isAppointmentsInitialLoad.current = false;
       return;
     }
     localStorage.setItem('luxe&glowA', JSON.stringify(appointments));
@@ -45,8 +49,7 @@ export function OrderProvider({ children }) {
 
   const addAppointmentsData = (appointmentsData) => {
     setAppointments(prev => {
-      console.log(prev)
-      if (prev.some(o => o._id === appointmentsData._id)) return prev;
+      if (prev.some(a => a._id === appointmentsData._id)) return prev;
       return [...prev, appointmentsData];
     });
   };
@@ -57,229 +60,169 @@ export function OrderProvider({ children }) {
     ));
   };
 
-  // Poll server for status updates every 60s
+  const updateAppointmentStatus = (appointmentId, newStatus) => {
+    setAppointments(prev => prev.map(a =>
+      a._id === appointmentId? {...a, status: newStatus, updatedAt: new Date().toISOString() } : a
+    ));
+  };
+
+  // Use your existing getOrderData to fetch ALL orders at once instead of individual calls
   const checkOrderStatusUpdates = useCallback(async () => {
-    if (isPolling ||!orders.length) return;
-
-    // Only check non-terminal orders
-    const ordersToCheck = orders.filter(o =>
-    !['delivered', 'cancelled', 'returned'].includes(o.status) &&
-    !o._id.startsWith('local_') // Skip unsynced local orders
-    );
-
-    if (!ordersToCheck.length) return;
+    if (isPolling || !orders.length) return;
 
     setIsPolling(true);
     try {
-      const results = await Promise.allSettled(
-        ordersToCheck.map(async (order) => {
-          const res = await axios.get(`${backendUrl}/order/i-data?orderId=${order._id}`);
-          return res.data.success? res.data.data : null;
-        })
-      );
+      // 1 API call to get ALL orders, not N calls
+      const res = await axios.get(`${backendUrl}/order/data`);
+      if (res.data.success && res.data.orders?.length) {
+        const serverOrders = res.data.orders;
+        setOrders(prev => {
+          const updated = [...prev];
+          let updatedCount = 0;
 
-      let updatedCount = 0;
-      setOrders(prev => {
-        const updated = [...prev];
-        results.forEach((result, i) => {
-          if (result.status === 'fulfilled' && result.value) {
-            const serverOrder = result.value;
-            const localOrder = ordersToCheck[i];
-
-            // Only update if status changed
-            if (serverOrder.status!== localOrder.status) {
-              const idx = updated.findIndex(o => o._id === localOrder._id);
-              if (idx!== -1) {
-                updated[idx] = {...updated[idx],...serverOrder };
-                updatedCount++;
-                toast.info(`Order #${localOrder._id.slice(-6).toUpperCase()} updated to ${serverOrder.status}`);
-              }
+          serverOrders.forEach(serverOrder => {
+            const idx = updated.findIndex(o => o._id === serverOrder._id);
+            if (idx!== -1 &&
+                updated[idx].status!== serverOrder.status) {
+              updated[idx] = {...updated[idx],...serverOrder };
+              updatedCount++;
+              toast.info(`Order #${serverOrder._id.slice(-6).toUpperCase()} updated to ${serverOrder.status}`);
             }
-          }
-        });
-        return updated;
-      });
+          });
 
-      if (updatedCount > 0) {
-        console.log(`[Orders] Updated ${updatedCount} order statuses`);
+          if (updatedCount > 0) console.log(`[Orders] Updated ${updatedCount} orders`);
+          return updated;
+        });
       }
     } catch (error) {
-      console.error('[Orders] Poll failed:', error);
+      console.error('[Orders] Sync failed:', error);
     } finally {
       setIsPolling(false);
     }
   }, [orders, backendUrl, isPolling]);
 
-  // Poll server for status updates every 60s
+  // Use your existing getOrderDataA to fetch ALL appointments
   const checkAppointmentsStatusUpdates = useCallback(async () => {
-    if (isPolling ||!appointments.length) return;
-
-    // Only check non-terminal orders
-    const ordersToCheck = appointments.filter(a =>
-    !['finished', 'cancelled'].includes(a.status) &&
-    !a._id.startsWith('local_') // Skip unsynced local orders
-    );
-
-    if (!ordersToCheck.length) return;
-
-    setIsPolling(true);
+    if (isAPolling || !appointments.length) return;
+    
+    setIsAPolling(true);
     try {
-      const results = await Promise.allSettled(
-        ordersToCheck.map(async (appointment) => {
-          const res = await axios.get(`${backendUrl}/order/i-data?orderId=${appointment._id}`);
-          return res.data.success? res.data.data : null;
-        })
-      );
+      const res = await axios.get(`${backendUrl}/order/a-data`);
+      if (res.data.success && res.data.appointments?.length) {
+        const serverAppointments = res.data.appointments;
+        setAppointments(prev => {
+          const updated = [...prev];
+          let updatedCount = 0;
 
-      let updatedCount = 0;
-      setOrders(prev => {
-        const updated = [...prev];
-        results.forEach((result, i) => {
-          if (result.status === 'fulfilled' && result.value) {
-            const serverOrder = result.value;
-            const localOrder = ordersToCheck[i];
-
-            // Only update if status changed
-            if (serverOrder.status!== localOrder.status) {
-              const idx = updated.findIndex(o => o._id === localOrder._id);
-              if (idx!== -1) {
-                updated[idx] = {...updated[idx],...serverOrder };
-                updatedCount++;
-                toast.info(`Appointment #${localOrder._id.slice(-6).toUpperCase()} updated to ${serverOrder.status}`);
-              }
+          serverAppointments.forEach(serverApp => {
+            const idx = updated.findIndex(a => a._id === serverApp._id);
+            
+            if (idx !== -1 &&
+                updated[idx].status !== serverApp.status) {
+              updated[idx] = {...updated[idx],...serverApp };
+              updatedCount++;
+              toast.info(`Appointment #${serverApp._id.slice(-6).toUpperCase()} updated to ${serverApp.status}`);
             }
-          }
-        });
-        return updated;
-      });
+          });
 
-      if (updatedCount > 0) {
-        console.log(`[Appointment] Updated ${updatedCount} appointment statuses`);
+          if (updatedCount > 0) console.log(`[Appointments] Updated ${updatedCount} appointments`);
+          return updated;
+        });
       }
     } catch (error) {
-      console.error('[Appointment] Poll failed:', error);
+      console.error('[Appointments] Sync failed:', error);
     } finally {
-      setIsPolling(false);
+      setIsAPolling(false);
     }
-  }, [appointments, backendUrl, isPolling]);
+  }, [appointments, backendUrl, isAPolling]);
 
-  // Start polling on mount, cleanup on unmount
+  // Poll every 5 minutes instead of 1 minute to reduce load
   useEffect(() => {
-    // Initial check after 5s, then every 60s
-    const initialTimeout = setTimeout(checkOrderStatusUpdates, 5000);
-    pollIntervalRef.current = setInterval(checkOrderStatusUpdates, 60000);
+    const initialTimeout = setTimeout(checkOrderStatusUpdates, 10000);
+    ordersPollRef.current = setInterval(checkOrderStatusUpdates, 300000); // 5 min
 
     return () => {
       clearTimeout(initialTimeout);
-      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (ordersPollRef.current) clearInterval(ordersPollRef.current);
     };
   }, [checkOrderStatusUpdates]);
 
   useEffect(() => {
-    // Initial check after 5s, then every 60s
-    const initialTimeout = setTimeout(checkAppointmentsStatusUpdates, 5000);
-    pollIntervalRef.current = setInterval(checkAppointmentsStatusUpdates, 60000);
+    const initialTimeout = setTimeout(checkAppointmentsStatusUpdates, 10000);
+    appointmentsPollRef.current = setInterval(checkAppointmentsStatusUpdates, 300000); // 5 min
 
     return () => {
       clearTimeout(initialTimeout);
-      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (appointmentsPollRef.current) clearInterval(appointmentsPollRef.current);
     };
   }, [checkAppointmentsStatusUpdates]);
 
-  // Retry syncing pending orders
+  // Sync pending orders one by one using your existing createOrder
   const syncPendingOrders = async () => {
-    const pending = orders.filter(o => o.status === 'pending_sync');
-    if (!pending.length) return;
+    const pending = orders.filter(o => o.status === 'pending_sync' || o._id.startsWith('local_'));
+    if (!pending.length) {
+      toast.info('No pending orders to sync');
+      return;
+    }
 
-    const results = await Promise.allSettled(
-      pending.map(async (localOrder) => {
+    let syncedCount = 0;
+    for (const localOrder of pending) {
+      try {
         const { _id, status, syncError,...payload } = localOrder;
-        console.log(payload)
         const res = await axios.post(`${backendUrl}/order/create-order`, { orderData: payload });
         if (res.data.success) {
-          return { oldId: _id, newOrder: res.data.data };
-        }
-        throw new Error(res.data.message);
-      })
-    );
-
-    let syncedCount = 0;
-    setOrders(prev => {
-      let updated = [...prev];
-      results.forEach((result) => {
-        if (result.status === 'fulfilled') {
-          const { oldId, newOrder } = result.value;
-          updated = updated.map(o => o._id === oldId? newOrder : o);
+          setOrders(prev => prev.map(o => o._id === _id? res.data.data : o));
           syncedCount++;
         }
-      });
-      return updated;
-    });
-
-    if (syncedCount) {
-      toast.success(`Synced ${syncedCount} pending order${syncedCount > 1? 's' : ''}`);
+      } catch (error) {
+        console.error(`[Orders] Failed to sync ${localOrder._id}:`, error);
+      }
     }
 
+    if (syncedCount) toast.success(`Synced ${syncedCount} order${syncedCount > 1? 's' : ''}`);
     const failedCount = pending.length - syncedCount;
-    if (failedCount) {
-      toast.error(`${failedCount} order${failedCount > 1? 's' : ''} still pending`);
-    }
+    if (failedCount) toast.error(`${failedCount} order${failedCount > 1? 's' : ''} failed to sync`);
   };
 
-  // Retry syncing pending Appointments
+  // Sync pending appointments one by one
   const syncPendingAppointments = async () => {
-    const pending = appointments.filter(a => a.status === 'pending_sync');
-    if (!pending.length) return;
+    const pending = appointments.filter(a => a.status === 'pending_sync' || a._id.startsWith('local_'));
+    if (!pending.length) {
+      toast.info('No pending appointments to sync');
+      return;
+    }
 
-    const results = await Promise.allSettled(
-      pending.map(async (localOrder) => {
-        const { _id, status, syncError,...payload } = localOrder;
-        console.log(payload)
+    let syncedCount = 0;
+    for (const localApp of pending) {
+      try {
+        const { _id, status, syncError,...payload } = localApp;
         const res = await axios.post(`${backendUrl}/order/create-orderA`, { orderData: payload });
         if (res.data.success) {
-          return { oldId: _id, newOrder: res.data.data };
-        }
-        throw new Error(res.data.message);
-      })
-    );
-
-    let syncedCount = 0;
-    setOrders(prev => {
-      let updated = [...prev];
-      results.forEach((result) => {
-        if (result.status === 'fulfilled') {
-          const { oldId, newOrder } = result.value;
-          updated = updated.map(o => o._id === oldId? newOrder : o);
+          setAppointments(prev => prev.map(a => a._id === _id? res.data.data : a));
           syncedCount++;
         }
-      });
-      return updated;
-    });
-
-    if (syncedCount) {
-      toast.success(`Synced ${syncedCount} pending order${syncedCount > 1? 's' : ''}`);
+      } catch (error) {
+        console.error(`[Appointments] Failed to sync ${localApp._id}:`, error);
+      }
     }
 
+    if (syncedCount) toast.success(`Synced ${syncedCount} appointment${syncedCount > 1? 's' : ''}`);
     const failedCount = pending.length - syncedCount;
-    if (failedCount) {
-      toast.error(`${failedCount} order${failedCount > 1? 's' : ''} still pending`);
-    }
+    if (failedCount) toast.error(`${failedCount} appointment${failedCount > 1? 's' : ''} failed to sync`);
   };
-
-  const ordersCount = orders.length;
-  const appointmentsCount = appointments.length;
 
   return (
     <OrderContext.Provider value={{
       orders,
       addOrderData,
-      ordersCount,
+      ordersCount: orders.length,
       updateOrderStatus,
       syncPendingOrders,
       checkOrderStatusUpdates,
       appointments,
-      appointmentsCount,
+      appointmentsCount: appointments.length,
       addAppointmentsData,
+      updateAppointmentStatus,
       checkAppointmentsStatusUpdates,
       syncPendingAppointments
     }}>

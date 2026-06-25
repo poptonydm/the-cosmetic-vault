@@ -2,34 +2,26 @@ import React, { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { useOrderContext } from '../context/OrderContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Truck, CheckCircle, Clock, AlertCircle, RefreshCw, ShoppingBag, ChevronDown, ChevronUp, XCircle, RotateCcw } from 'lucide-react';
+import { Package, CheckCircle, Clock, AlertCircle, RefreshCw, ShoppingBag, ChevronDown, ChevronUp, XCircle, Scissors, User, Mail, Phone, Calendar, MessageSquare, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 const statusConfig = {
-  'pending_sync': {
-    label: 'Pending Sync',
-    color: 'bg-amber-500',
-    textColor: 'text-amber-600 dark:text-amber-400',
-    bgColor: 'bg-amber-50 dark:bg-amber-500/10',
-    borderColor: 'border-amber-200 dark:border-amber-800',
-    icon: AlertCircle
-  },
   'pending': {
-    label: 'Payment Pending',
+    label: 'Pending',
     color: 'bg-amber-500',
     textColor: 'text-amber-600 dark:text-amber-400',
     bgColor: 'bg-amber-50 dark:bg-amber-500/10',
     borderColor: 'border-amber-200 dark:border-amber-800',
     icon: Clock
   },
-  'paid': {
-    label: 'Processing',
+  'in_progress': {
+    label: 'In Progress',
     color: 'bg-blue-500',
     textColor: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-50 dark:bg-blue-500/10',
     borderColor: 'border-blue-200 dark:border-blue-800',
-    icon: Package
+    icon: Sparkles
   },
   'finished': {
     label: 'Finished',
@@ -47,13 +39,26 @@ const statusConfig = {
     borderColor: 'border-red-200 dark:border-red-800',
     icon: XCircle
   },
+  'pending_sync': {
+    label: 'Pending Sync',
+    color: 'bg-amber-500',
+    textColor: 'text-amber-600 dark:text-amber-400',
+    bgColor: 'bg-amber-50 dark:bg-amber-500/10',
+    borderColor: 'border-amber-200 dark:border-amber-800',
+    icon: AlertCircle
+  },
 };
 
 const STATUS_GROUPS = {
   active: {
     label: 'Active',
     icon: Clock,
-    statuses: ['pending', 'paid', 'pending_sync']
+    statuses: ['pending', 'pending_sync']
+  },
+  in_progress: { 
+    label: 'In Progress',
+    icon: Sparkles,
+    statuses: ['in_progress']
   },
   finished: {
     label: 'Finished',
@@ -67,12 +72,31 @@ const STATUS_GROUPS = {
   }
 };
 
+const StatusBadge = ({ status }) => {
+  const config = statusConfig[status] || statusConfig.pending;
+  const Icon = config.icon;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${config.bgColor} ${config.textColor}`}>
+      <Icon className="h-3 w-3" />
+      {config.label}
+    </span>
+  );
+};
+
 const AppointmentCard = ({ appointment }) => {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const config = statusConfig[appointment.status] || statusConfig['pending'];
   const Icon = config.icon;
-  const appointmentDate = new Date(appointment.createdAt || Date.now());
+
+  // Handle separate date + time with AM/PM
+  const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}`);
+  const createdDate = new Date(appointment.createdAt || Date.now());
+  const timeFormatted = appointmentDateTime.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
 
   return (
     <motion.div
@@ -93,7 +117,7 @@ const AppointmentCard = ({ appointment }) => {
                 {config.label}
               </span>
               {appointment.status === 'pending_sync' && (
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text- font-bold text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
                   OFFLINE
                 </span>
               )}
@@ -102,7 +126,7 @@ const AppointmentCard = ({ appointment }) => {
               #{appointment._id?.slice(-8).toUpperCase() || 'LOCAL'}
             </p>
             <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              {format(appointmentDate, 'MMM dd, yyyy • h:mm a')}
+              {format(createdDate, 'MMM dd, yyyy • h:mm a')}
             </p>
           </div>
           <div className="text-right">
@@ -113,14 +137,19 @@ const AppointmentCard = ({ appointment }) => {
         </div>
 
         <div className="flex items-center gap-3 rounded-xl bg-zinc-50 p-3 dark:bg-zinc-800/50">
+          <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-rose-500/10">
           <img
-            src={appointment?.image || 'https://via.placeholder.com/56'}
-            alt={appointment?.name || 'Service'}
-            className="h-14 w-14 rounded-lg object-cover"
+            src={appointment.image}
+            alt={appointment.serviceName}
+            className="h-full w-full rounded-lg object-cover"
           />
-          <div className="flex-1">
+          </div>
+          <div className="flex-1 min-w-0">
             <p className="font-semibold text-zinc-900 dark:text-white line-clamp-1">
-              {appointment?.name || 'Appointment'}
+              {appointment.serviceName || 'Appointment'}
+            </p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              {new Date(appointment.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} • {appointment.time}
             </p>
           </div>
         </div>
@@ -142,37 +171,74 @@ const AppointmentCard = ({ appointment }) => {
             exit={{ height: 0, opacity: 0 }}
             className="border-t border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950"
           >
-            <div className="space-y-3 p-6">
+            <div className="space-y-4 p-6">
               <h4 className="text-xs font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                Appointments
+                Appointment Details
               </h4>
-              {order.items?.map((item, i) => (
-                <div key={i} className="flex gap-3">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="h-12 w-12 rounded-lg object-cover"
-                  />
+
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <User className="mt-0.5 h-4 w-4 flex-shrink-0 text-zinc-400" />
                   <div className="flex-1">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">Customer</p>
                     <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                      {item.name}
-                    </p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      ₵{item.price} × {item.quantity}
-                      {item.size && item.size!== 'N/A' && ` • Size: ${item.size}`}
-                      {item.color && item.color!== 'N/A' && ` • ${item.color}`}
+                      {appointment.clientName || appointment.customerName}
                     </p>
                   </div>
-                  <p className="text-sm font-bold text-zinc-900 dark:text-white">
-                    ₵{(item.price * item.quantity).toLocaleString()}
-                  </p>
                 </div>
-              ))}
+
+                {appointment.stylist && (
+                  <div className="flex items-start gap-3">
+                    <Scissors className="mt-0.5 h-4 w-4 flex-shrink-0 text-zinc-400" />
+                    <div className="flex-1">
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">Stylist</p>
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                        {appointment.stylist}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-start gap-3">
+                  <Phone className="mt-0.5 h-4 w-4 flex-shrink-0 text-zinc-400" />
+                  <div className="flex-1">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">Contact</p>
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                      {appointment.phone}
+                    </p>
+                  </div>
+                </div>
+
+                {appointment.note && (
+                  <div className="flex items-start gap-3">
+                    <MessageSquare className="mt-0.5 h-4 w-4 flex-shrink-0 text-zinc-400" />
+                    <div className="flex-1">
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">Note</p>
+                      <p className="text-sm text-zinc-700 dark:text-zinc-300">
+                        {appointment.note}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {appointment.paymentRef && (
+                  <div className="rounded-lg bg-zinc-100 p-3 dark:bg-zinc-800">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Payment Ref: <span className="font-mono font-semibold text-zinc-900 dark:text-white">{appointment.paymentRef}</span>
+                    </p>
+                    <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">
+                      Contact support with this for help
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <button
-                onClick={() => navigate(`/order/${order._id}`)}
-                className="mt-4 w-full rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+                disabled={appointment.status === 'pending_sync'}
+                onClick={() => navigate(`/appointment/${appointment._id}`)}
+                className={`${appointment.status === 'pending_sync'? "hidden" : ""} mt-2 w-full rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200`}
               >
-                Track Order
+                Track Appointment
               </button>
             </div>
           </motion.div>
@@ -187,7 +253,7 @@ export const Appointments = () => {
   const { appointments, syncPendingAppointments, checkAppointmentsStatusUpdates } = useOrderContext();
   const [activeGroup, setActiveGroup] = useState('active');
   const [syncing, setSyncing] = useState(false);
-  const [refreshing, setRefreshing] = useState(false); 
+  const [refreshing, setRefreshing] = useState(false);
 
   const stats = useMemo(() => {
     const active = appointments.filter(a => STATUS_GROUPS.active.statuses.includes(a.status));
@@ -233,9 +299,9 @@ export const Appointments = () => {
           <div className="mb-8 inline-flex rounded-full bg-zinc-100 p-6 dark:bg-zinc-900">
             <ShoppingBag className="h-16 w-16 text-zinc-400" />
           </div>
-          <h1 className="mb-4 text-4xl font-black text-zinc-900 dark:text-white">No Orders Yet</h1>
+          <h1 className="mb-4 text-4xl font-black text-zinc-900 dark:text-white">No Appointments Yet</h1>
           <p className="mb-8 text-lg text-zinc-600 dark:text-zinc-400">
-            You haven't booked any Appointment yet, book to see them here.
+            You haven't booked any appointment yet, book to see them here.
           </p>
           <button
             onClick={() => navigate('/services')}
@@ -251,14 +317,13 @@ export const Appointments = () => {
   return (
     <div className="min-h-screen bg-zinc-50 px-4 py-24 dark:bg-black">
       <div className="mx-auto max-w-7xl">
-        {/* Header */}
         <div className="mb-8">
           <div className="mb-8 text-center">
             <h1 className="mb-2 text-5xl font-black tracking-tight text-zinc-900 dark:text-white">
               Your Appointments
             </h1>
             <p className="text-zinc-600 dark:text-zinc-400">
-              Track and manage all your Appointments
+              Track and manage all your appointments
             </p>
           </div>
           <button
@@ -270,7 +335,6 @@ export const Appointments = () => {
             {refreshing? 'Refreshing...' : 'Refresh'}
           </button>
 
-          {/* Stats */}
           <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { label: 'Total Appointments', value: stats.total, icon: Package },
@@ -290,7 +354,6 @@ export const Appointments = () => {
             ))}
           </div>
 
-          {/* Sync Banner */}
           {hasPendingSync && (
             <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-500/10">
               <div className="flex items-center justify-between gap-4">
@@ -313,7 +376,6 @@ export const Appointments = () => {
           )}
         </div>
 
-        {/* Tabs */}
         <div className="mb-8 flex gap-2 overflow-x-auto border-b border-zinc-200 dark:border-zinc-800">
           {Object.entries(STATUS_GROUPS).map(([key, group]) => {
             const Icon = group.icon;
@@ -326,7 +388,7 @@ export const Appointments = () => {
                 onClick={() => setActiveGroup(key)}
                 className={`cursor-pointer flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold transition ${
                   isActive
-                  ? 'border-black text-black dark:border-white dark:text-white'
+              ? 'border-black text-black dark:border-white dark:text-white'
                     : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
                 }`}
               >
@@ -334,7 +396,7 @@ export const Appointments = () => {
                 {group.label}
                 <span className={`rounded-full px-2 py-0.5 text-xs ${
                   isActive
-                  ? 'bg-black text-white dark:bg-white dark:text-black'
+              ? 'bg-black text-white dark:bg-white dark:text-black'
                     : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
                 }`}>
                   {count}
@@ -344,7 +406,6 @@ export const Appointments = () => {
           })}
         </div>
 
-        {/* Orders Grid */}
         <AnimatePresence mode="wait">
           {filteredAppointments.length > 0? (
             <motion.div
@@ -367,7 +428,7 @@ export const Appointments = () => {
             >
               <Package className="mx-auto mb-4 h-16 w-16 text-zinc-300 dark:text-zinc-700" />
               <p className="text-lg font-semibold text-zinc-600 dark:text-zinc-400">
-                No {STATUS_GROUPS[activeGroup].label.toLowerCase()} Appointments
+                No {STATUS_GROUPS[activeGroup].label.toLowerCase()} appointments
               </p>
             </motion.div>
           )}

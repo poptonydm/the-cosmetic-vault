@@ -188,30 +188,44 @@ const OrderCard = ({ order }) => {
                 Order Items
               </h4>
               {order.items?.map((item, i) => (
-                <div key={i} className="flex gap-3">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="h-12 w-12 rounded-lg object-cover"
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                      {item.name}
-                    </p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      ₵{item.price} × {item.quantity}
-                      {item.size && item.size!== 'N/A' && ` • Size: ${item.size}`}
-                      {item.color && item.color!== 'N/A' && ` • ${item.color}`}
+                <div>
+                  <div key={i} className="flex gap-3">
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="h-12 w-12 rounded-lg object-cover"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                        {item.name}
+                      </p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        ₵{item.price} × {item.quantity}
+                        {item.size && item.size!== 'N/A' && ` • Size: ${item.size}`}
+                        {item.color && item.color!== 'N/A' && ` • ${item.color}`}
+                      </p>
+                    </div>
+                    <p className="text-sm font-bold text-zinc-900 dark:text-white">
+                      ₵{(item.price * item.quantity).toLocaleString()}
                     </p>
                   </div>
-                  <p className="text-sm font-bold text-zinc-900 dark:text-white">
-                    ₵{(item.price * item.quantity).toLocaleString()}
-                  </p>
+                  <div className='mt-2'>
+                    <p className="text-sm font-bold text-zinc-900 dark:text-white">
+                      Customer: {(order.customer.name)}
+                    </p>
+                    <p className="text-sm font-bold text-zinc-900 dark:text-white">
+                      Contact: {(order.customer.phone)}
+                    </p>
+                    <p className="text-sm font-bold text-zinc-900 dark:text-white">
+                      Payment Ref: {(order.paymentRef)}.... <span className='text-red-600'>(Contact support with this for help..)</span>
+                    </p>
+                  </div>
                 </div>
               ))}
               <button
+                disabled={order.status === 'pending_sync'}
                 onClick={() => navigate(`/order/${order._id}`)}
-                className="mt-4 w-full rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+                className={`${order.status === 'pending_sync' ? 'hidden' : ''} mt-4 w-full rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200`}
               >
                 Track Order
               </button>

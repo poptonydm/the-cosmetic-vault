@@ -8,8 +8,10 @@ const ordersShema = new mongoose.Schema({
     phone: {type: String, required: true},
     email: {type: String, required: true},
     serviceName:{type: String, required: true},
-    servicePrice:{type: Number, required: true},
-    status: {type: String, default: "paid"},
+    total:{type: Number, required: true},
+    stylist: {type: String,},
+    image: {type: String,},
+    status: {type: String, default: "pending"},
 },{timestamps: true},)
 
 const orderModel = mongoose.models.luxeglowservices || mongoose.model('luxeglowservices', ordersShema);

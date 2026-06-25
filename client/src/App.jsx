@@ -40,7 +40,7 @@ export default function App() {
               <Route path='/orders' element={<Orders />} />
               <Route path='/order/:id' element={<OrderDetails />} />
               <Route path='/appointments' element={<Appointments />} />
-              <Route path='/appointments/:id' element={<AppointmentDetails />} />
+              <Route path='/appointment/:id' element={<AppointmentDetails />} />
               <Route path='/admin' element={<Admin />} />
             </Routes>
           </main>

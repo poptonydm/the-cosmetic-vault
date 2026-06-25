@@ -41,8 +41,6 @@ export default function Booking() {
         const placeOrder = await createOrder(response.reference);
         if(placeOrder){
           toast.success(`Payment complete! Ref: ${response.reference}`);
-          setOrderRef(response.reference);
-          setCheckoutStep('success');
         }else{
           toast.error('Payment succeeded but booking save failed');
         }
@@ -79,9 +77,17 @@ export default function Booking() {
   const createOrder = async (reference) => {
     const orderData = {
       customer: form,
+      clientName: form.name,
+      phone: form.phone,
       service: selectedService,
+      serviceName: selectedService.name,
       total: selectedService.price,
+      time: time,
+      date: date,
+      image: selectedService.image,
+      stylist: stylist,
       paymentRef: reference,
+      notes: '',
       status: 'paid',
       createdAt: new Date().toISOString(),
     };

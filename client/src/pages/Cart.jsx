@@ -21,7 +21,7 @@ export default function Cart() {
     clearCart
   } = useCart();
 
-  const [checkoutStep, setCheckoutStep] = useState('cart'); // 'cart' | 'checkout' | 'success'
+  const [checkoutStep, setCheckoutStep] = useState('cart');
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     email: '',
@@ -29,7 +29,7 @@ export default function Cart() {
     address: ''
   });
   const [orderRef, setOrderRef] = useState('');
-  const [checkoutItems, setCheckoutItems] = useState([]); // Array - can be 1 item or full cart
+  const [checkoutItems, setCheckoutItems] = useState([]);
 
   const handleQuantityChange = (cartItemId, change) => {
     const item = cartItems.find(i => i.cartItemId === cartItemId);
@@ -129,7 +129,6 @@ export default function Cart() {
       })),
       total,
       paymentRef: reference,
-      status: 'paid',
       createdAt: new Date().toISOString(),
     };
   

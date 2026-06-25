@@ -4,12 +4,12 @@ const CartContext = createContext();
 
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState(() => {
-    const saved = localStorage.getItem('luxe&glow');
+    const saved = localStorage.getItem('luxe&glowC');
     return saved? JSON.parse(saved) : [];
   });
 
   useEffect(() => {
-    localStorage.setItem('luxe&glow', JSON.stringify(cartItems));
+    localStorage.setItem('luxe&glowC', JSON.stringify(cartItems));
   }, [cartItems]);
 
   const addToCart = (product) => {

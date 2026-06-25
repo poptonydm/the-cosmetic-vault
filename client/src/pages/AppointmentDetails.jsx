@@ -1,23 +1,21 @@
-import React from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOrderContext } from '../context/OrderContext';
-import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 
 const statusConfig = {
-  'pending': { label: 'Pending Payment', color: 'bg-yellow-500', icon: '🕐', desc: 'Waiting for payment confirmation', step: 0 },
   'paid': { label: 'Payment Confirmed', color: 'bg-blue-500', icon: '💳', desc: 'We received your payment', step: 1 },
-  'processing': { label: 'Processing Order', color: 'bg-orange-500', icon: '📦', desc: 'Picking & packing your items', step: 2 },
-  'shipped': { label: 'Shipped', color: 'bg-indigo-500', icon: '🚚', desc: 'Your order is on the way', step: 3 },
-  'delivered': { label: 'Delivered', color: 'bg-green-500', icon: '✅', desc: 'Enjoy your new pieces!', step: 4 },
-  'cancelled': { label: 'Cancelled', color: 'bg-red-500', icon: '❌', desc: 'Order was cancelled', step: 0 }
+  'pending': { label: 'Pending', color: 'bg-amber-500', icon: '🕐', desc: 'Waiting for appointment date', step: 0 },
+  'confirmed': { label: 'Confirmed', color: 'bg-blue-500', icon: '✅', desc: 'Your appointment is booked', step: 1 },
+  'in_progress': { label: 'In Progress', color: 'bg-indigo-500', icon: '💇‍♀️', desc: 'Service is ongoing', step: 2 },
+  'completed': { label: 'Completed', color: 'bg-green-500', icon: '✨', desc: 'Service completed', step: 3 },
+  'cancelled': { label: 'Cancelled', color: 'bg-red-500', icon: '❌', desc: 'Appointment was cancelled', step: 0 }
 };
 
 const trackingSteps = [
-  { key: 'paid', label: 'Confirmed' },
-  { key: 'processing', label: 'Processing' },
-  { key: 'shipped', label: 'Shipped' },
-  { key: 'delivered', label: 'Delivered' }
+  { key: 'pending', label: 'Pending' },
+  { key: 'in_progress', label: 'In Progress' },
+  { key: 'completed', label: 'Completed' }
 ];
 
 const InfoRow = ({ label, value, mono = false }) => (
@@ -48,8 +46,8 @@ const Toast = ({ message, onClose }) => {
 export default function AppointmentDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { orders, updateOrderStatus } = useOrderContext();
-  const [order, setOrder] = useState(null);
+  const { appointments, updateAppointmentStatus } = useOrderContext();
+  const [appointment, setAppointment] = useState(null);
   const [isLive, setIsLive] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [toast, setToast] = useState(null);
@@ -74,7 +72,7 @@ export default function AppointmentDetails() {
       setNotifPermission(permission);
       if (permission === 'granted') {
         new Notification('Emma Studio', {
-          body: 'Notifications enabled! You\'ll get updates for this order.',
+          body: 'Notifications enabled! You\'ll get updates for this appointment.',
           icon: '/logo.png'
         });
       }
@@ -84,74 +82,82 @@ export default function AppointmentDetails() {
   };
 
   useEffect(() => {
-    const found = orders.find(o => o._id === id || o.id === id);
+    const found = appointments.find(a => a._id === id || a.id === id);
     if (found) {
-      setOrder(found);
+      setAppointment(found);
     }
-  }, [id, orders]);
+  }, [id, appointments]);
 
   useEffect(() => {
     if (!id ||!isLive) return;
 
-    const fetchOrderStatus = async () => {
+    const fetchAppointmentStatus = async () => {
       try {
-        const res = await axios.get(`${backendUrl}/order/i-data?orderId=${id}`);
+        const res = await axios.get(`${backendUrl}/order/ia-data?orderId=${id}`);
         if (res.data.success) {
-          const newOrder = res.data.data;
+          const newAppointment = res.data.data;
 
-          setOrder(prev => {
-            if (prev?.status!== newOrder.status && prev?.status) {
-              const newConfig = statusConfig[newOrder.status];
+          setAppointment(prev => {
+            if (prev?.status!== newAppointment.status && prev?.status) {
+              const newConfig = statusConfig[newAppointment.status];
               setToast(`Status updated: ${newConfig.label}`);
 
               if (notifPermission === 'granted') {
-                new Notification('Emma Studio Order Update', {
-                  body: `${newOrder.itemName} is now ${newConfig.label}`,
+                new Notification('Emma Studio Appointment Update', {
+                  body: `${newAppointment.serviceName} is now ${newConfig.label}`,
                   icon: '/logo.png',
-                  tag: `order-${id}`,
+                  tag: `appointment-${id}`,
                 });
               }
-              updateOrderStatus?.(id, newOrder.status);
+              updateAppointmentStatus?.(id, newAppointment.status);
             }
-            return newOrder;
+            return newAppointment;
           });
           setLastUpdated(new Date());
         }
       } catch (error) {
-        console.error('[LIVE] Failed to fetch order:', error);
+        console.error('[LIVE] Failed to fetch appointment:', error);
       }
     };
 
-    fetchOrderStatus();
-    pollInterval.current = setInterval(fetchOrderStatus, 50000);
+    fetchAppointmentStatus();
+    pollInterval.current = setInterval(fetchAppointmentStatus, 50000);
 
-    if (order?.status === 'delivered' || order?.status === 'cancelled') {
+    if (appointment?.status === 'completed' || appointment?.status === 'cancelled') {
       setIsLive(false);
     }
 
     return () => {
       if (pollInterval.current) clearInterval(pollInterval.current);
     };
-  }, [id, isLive, order?.status, updateOrderStatus, notifPermission]);
+  }, [id, isLive, appointment?.status, updateAppointmentStatus, notifPermission, backendUrl]);
 
-  if (!order) {
+  if (!appointment) {
     return (
       <div className="min-h-screen bg-white px-4 py-24 text-center text-zinc-900 dark:bg-black dark:text-white">
         <div className="text-6xl mb-4">🔍</div>
-        <h1 className="mb-4 text-4xl font-bold">Order Not Found</h1>
+        <h1 className="mb-4 text-4xl font-bold">Appointment Not Found</h1>
         <button
-          onClick={() => navigate('/orders')}
+          onClick={() => navigate('/appointments')}
           className="rounded-full bg-black px-8 py-3 font-bold text-white dark:bg-white dark:text-black"
         >
-          Back to Orders
+          Back to Appointments
         </button>
       </div>
     );
   }
 
-  const config = statusConfig[order.status] || statusConfig['pending'];
+  const config = statusConfig[appointment.status] || statusConfig['pending'];
   const currentStep = config.step;
-  const orderDate = new Date(order.createdAt).toLocaleString('en-GB', {
+  
+  // Combine separate date and time fields
+  const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}`);
+  const appointmentDate = appointmentDateTime.toLocaleString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+  
+  const createdDate = new Date(appointment.createdAt).toLocaleString('en-GB', {
     weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit'
   });
@@ -166,7 +172,7 @@ export default function AppointmentDetails() {
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition hover:text-rose-500 dark:text-zinc-400"
           >
-            ← Back to Orders
+            ← Back to Appointments
           </button>
 
           {notifPermission!== 'granted' && (
@@ -184,7 +190,7 @@ export default function AppointmentDetails() {
           )}
         </div>
 
-        {isLive && order.status!== 'delivered' && (
+        {isLive && appointment.status!== 'completed' && appointment.status!== 'cancelled' && (
           <div className="mb-4 flex items-center gap-2 rounded-lg bg-green-50 px-4 py-2 text-sm dark:bg-green-950/30">
             <span className="h-2 w-2 animate-pulse rounded-full bg-green-500"></span>
             <span className="font-semibold text-green-700 dark:text-green-400">Live Tracking Active</span>
@@ -207,14 +213,14 @@ export default function AppointmentDetails() {
                 <p className="text-white/80">{config.desc}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-white/70">Order ID</p>
-                <p className="font-mono text-lg font-bold">#{order._id.slice(-8).toUpperCase()}</p>
+                <p className="text-sm text-white/70">Appointment ID</p>
+                <p className="font-mono text-lg font-bold">#{appointment._id.slice(-8).toUpperCase()}</p>
               </div>
             </div>
           </div>
 
           <div className="bg-zinc-50 p-6 dark:bg-zinc-800/50">
-            <h3 className="mb-4 text-sm font-bold uppercase text-zinc-500 dark:text-zinc-400">Order Progress</h3>
+            <h3 className="mb-4 text-sm font-bold uppercase text-zinc-500 dark:text-zinc-400">Appointment Progress</h3>
             <div className="flex items-center justify-between">
               {trackingSteps.map((step, idx) => {
                 const stepConfig = statusConfig[step.key];
@@ -226,7 +232,7 @@ export default function AppointmentDetails() {
                     <div className="flex flex-col items-center">
                       <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold transition-all duration-500 ${
                         isActive
-                       ? `${stepConfig.color} text-white scale-110`
+                      ? `${stepConfig.color} text-white scale-110`
                          : 'bg-zinc-300 text-zinc-500 dark:bg-zinc-700'
                       } ${isCurrent? 'ring-4 ring-rose-200 dark:ring-rose-900 animate-pulse' : ''}`}>
                         {isActive? '✓' : idx + 1}
@@ -249,60 +255,68 @@ export default function AppointmentDetails() {
           </div>
 
           <div className="p-6 sm:p-8">
-            <h2 className="mb-6 text-2xl font-bold">Order Summary</h2>
+            <h2 className="mb-6 text-2xl font-bold">Appointment Summary</h2>
 
             <div className="mb-8 flex gap-4 rounded-2xl bg-zinc-50 p-4 dark:bg-zinc-800">
-              <img
-                src={order.image}
-                alt={order.itemName}
-                className="h-20 w-20 flex-shrink-0 rounded-xl object-cover"
-              />
+              <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl bg-rose-500/10">
+                <img
+                  src={appointment.image}
+                  alt={appointment.serviceName}
+                  className="h-full w-full rounded-lg object-cover"
+                />
+              </div>
               <div className="flex-1">
-                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{order.itemName}</h3>
+                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{appointment.serviceName}</h3>
                 <p className="text-zinc-600 dark:text-zinc-400">
-                  Size: {order.size} • Color: {order.color} • Qty: {order.quantity}
+                  {appointmentDate}
                 </p>
-                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-500">₵{order.price} each</p>
+                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-500">Duration: 2-3 hours</p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-rose-500">₵{order.total}</p>
+                <p className="text-2xl font-bold text-rose-500">₵{appointment.total}</p>
               </div>
             </div>
 
             <div className="space-y-1 rounded-2xl bg-zinc-50 p-6 dark:bg-zinc-800">
-              <h3 className="mb-4 text-lg font-bold">Shipping Information</h3>
-              <InfoRow label="Customer Name" value={order.customerName} />
-              <InfoRow label="Email" value={order.email} />
-              <InfoRow label="Phone" value={order.phone} mono />
-              <InfoRow label="Shipping Address" value={order.address} />
-              <InfoRow label="Payment Reference" value={order.paymentRef} mono />
-              <InfoRow label="Order Date" value={orderDate} />
+              <h3 className="mb-4 text-lg font-bold">Customer Information</h3>
+              <InfoRow label="Customer Name" value={appointment.customerName} />
+              <InfoRow label="Email" value={appointment.email} />
+              <InfoRow label="Phone" value={appointment.phone} mono />
+              <InfoRow label="Appointment Date" value={new Date(appointment.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} />
+              <InfoRow label="Appointment Time" value={appointment.time} mono />
+              <InfoRow label="Booked On" value={createdDate} />
+              {appointment.note && (
+                <div className="pt-3">
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400">Note</span>
+                  <p className="mt-1 font-medium text-zinc-900 dark:text-white">{appointment.note}</p>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 rounded-2xl bg-gradient-to-br from-rose-50 to-pink-50 p-6 dark:from-rose-950/20 dark:to-pink-950/20">
               <div className="flex items-center justify-between">
-                <span className="text-lg font-semibold text-zinc-700 dark:text-zinc-300">Total Paid</span>
-                <span className="text-3xl font-bold text-rose-600 dark:text-rose-400">₵{order.total}</span>
+                <span className="text-lg font-semibold text-zinc-700 dark:text-zinc-300">Total Amount</span>
+                <span className="text-3xl font-bold text-rose-600 dark:text-rose-400">₵{appointment.total}</span>
               </div>
             </div>
           </div>
 
           <div className="border-t border-zinc-200 bg-zinc-50 p-6 dark:border-zinc-800 dark:bg-zinc-800/50">
             <div className="flex flex-col gap-3 sm:flex-row">
-              {order.status === 'delivered' && (
+              {appointment.status === 'completed' && (
                 <button className="flex-1 rounded-xl bg-black py-3 font-bold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200">
-                  Buy Again
+                  Book Again
                 </button>
               )}
               <button
-                onClick={() => navigate('/shop')}
+                onClick={() => navigate('/services')}
                 className="flex-1 rounded-xl bg-zinc-200 py-3 font-bold text-zinc-900 transition hover:bg-zinc-300 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
               >
-                Continue Shopping
+                Book New Appointment
               </button>
               <button
-              onClick={() => navigate('/contact')}
-              className="rounded-xl border-2 border-zinc-300 px-6 py-3 font-bold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                onClick={() => navigate('/contact')}
+                className="rounded-xl border-2 border-zinc-300 px-6 py-3 font-bold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">
                 Get Help
               </button>
             </div>

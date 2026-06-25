@@ -4,6 +4,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { toast } from 'sonner';
 import { MapPin, Phone, Mail, Calendar, CreditCard, Package, Truck, CheckCircle, Clock, AlertCircle, RefreshCw, ShoppingBag, XCircle, RotateCcw, Search, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Appointments from '../components/Appointments';
 
 const StatCard = ({ title, value, change, icon, color }) => {
   const isPositive = change >= 0;
@@ -98,6 +99,7 @@ export const Admin = () => {
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
   const [orders, setOrders] = useState([]);
   const [styleSessions, setStyleSessions] = useState([]);
+  const [appointments, setAppointments] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [orderSearch, setOrderSearch] = useState('');
@@ -143,7 +145,19 @@ export const Admin = () => {
       }
     };
 
-    Promise.all([getOrders(), getSections()]).finally(() => setLoading(false));
+    const getAppointments = async () => {
+      try {
+        const res = await axios.get(`${backendUrl}/order/a-data`);
+        if (res.data.success) {
+          setAppointments(res.data.appointments);
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error('Failed to load appointments');
+      }
+    };
+
+    Promise.all([getOrders(), getSections(), getAppointments()]).finally(() => setLoading(false));
   }, [backendUrl]);
 
   // Build customers from orders
@@ -207,6 +221,7 @@ export const Admin = () => {
       return { date: d, day: days[d.getDay()], revenue: 0 };
     });
 
+    let totalRevenue = 0;
     let thisWeekRevenue = 0;
     let lastWeekRevenue = 0;
     let todayRevenue = 0;
@@ -221,6 +236,7 @@ export const Admin = () => {
       const isCancelled = ['cancelled', 'returned'].includes(o.status);
 
       if (!isCancelled) {
+        totalRevenue += o.total || 0;
         if (d >= weekAgo) {
           thisWeekRevenue += o.total || 0;
           if (o.email) thisWeekCustomerEmails.add(o.email);
@@ -256,7 +272,8 @@ export const Admin = () => {
     };
 
     return {
-      totalRevenue: Math.round(thisWeekRevenue),
+      totalRevenue: Math.round(totalRevenue),
+      thisWeekRevenue: Math.round(thisWeekRevenue),
       totalRevenueChange: getChange(thisWeekRevenue, lastWeekRevenue),
       todayRevenue: Math.round(todayRevenue),
       todayRevenueChange: getChange(todayRevenue, yesterdayRevenue),
@@ -329,6 +346,22 @@ export const Admin = () => {
     }
   };
 
+  const updateAppointmentStatus = async (appointmentId, newStatus) => {
+    try {
+      const res = await axios.put(`${backendUrl}/order/update-orderA`, {
+        appointmentId: appointmentId,
+        status: newStatus
+      });
+      if (res.data.success) {
+        toast.success('Appopintment updated!');
+        setAppointments(prev => prev.map(e => e._id === appointmentId? {...e, status: newStatus } : e));
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to update appointment');
+    }
+  };
+
   const refreshOrders = async () => {
     setRefreshing(true);
     try {
@@ -348,7 +381,8 @@ export const Admin = () => {
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'orders', label: 'Orders', icon: '🛍' },
     { id: 'sessions', label: 'Enquiries', icon: '✨' },
-    { id: 'customers', label: 'Customers', icon: '👥' }
+    { id: 'customers', label: 'Customers', icon: '👥' },
+    { id: 'bookings', label: 'Bookings', icon: '📖' }
   ];
 
   if (loading) {
@@ -671,8 +705,15 @@ export const Admin = () => {
               <StatCard
                 title="Total Revenue"
                 value={`₵${analytics.totalRevenue.toLocaleString()}`}
-                change={analytics.totalRevenueChange}
+                //change={analytics.totalRevenueChange}
                 icon="💰"
+                color="bg-green-100 dark:bg-green-900/30"
+              />
+              <StatCard
+                title="This Week Revenue"
+                value={`₵${analytics.totalRevenue.toLocaleString()}`}
+                change={analytics.totalRevenueChange}
+                icon="📈"
                 color="bg-green-100 dark:bg-green-900/30"
               />
               <StatCard
@@ -1093,6 +1134,14 @@ export const Admin = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Bookings Tab */}
+        {activeTab === 'bookings' && (
+          <Appointments
+            appointments={appointments}
+            updateAppointmentStatus={updateAppointmentStatus}
+          />
         )}
       </div>
       <OrderModal />

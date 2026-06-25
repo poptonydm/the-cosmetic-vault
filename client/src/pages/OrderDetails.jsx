@@ -95,7 +95,7 @@ export default function OrderDetails() {
 
     const fetchOrderStatus = async () => {
       try {
-        const res = await axios.get(`${backendUrl}/order/i-data?orderId=${id}`);
+        const res = await axios.get(`${backendUrl}/order/io-data?orderId=${id}`);
         if (res.data.success) {
           const newOrder = res.data.data;
 
