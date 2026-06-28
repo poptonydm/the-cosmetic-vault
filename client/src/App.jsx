@@ -18,6 +18,7 @@ import { OrderProvider } from './context/OrderContext';
 import { Admin } from './pages/Admin';
 import AppointmentDetails from './pages/AppointmentDetails';
 import { Appointments } from './pages/Appointments';
+import ServiceCategory from './pages/ServiceCategory';
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/services/:id" element={<ServiceDetail />} />
+              <Route path="/services/category/:categoryName" element={<ServiceCategory />} />
               <Route path="/shop/:id" element={<ProductDetail />} />
               <Route path='/orders' element={<Orders />} />
               <Route path='/order/:id' element={<OrderDetails />} />
